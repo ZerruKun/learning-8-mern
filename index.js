@@ -5,7 +5,9 @@ import mongoose from "mongoose";
 import { validationResult } from "express-validator";
 
 import {registerValidation} from "./validations/auth.js"
+
 import UserModel from "./models/User.js"
+import checkAuth from "./utils/checkAuth.js"
 
 mongoose.connect("mongodb://127.0.0.1:27017/mern", {useNewUrlParser: true})
     .then(() => console.log("DB ok"))
@@ -46,7 +48,7 @@ app.post("/auth/login", async (req, res) => {
         const {passwordHash, ...userData} = user._doc;
     
         res.json({
-            userData,
+            ...userData,
             token,
         });
 
@@ -91,7 +93,7 @@ app.post("/auth/register", registerValidation, async (req, res) => {
         const {passwordHash, ...userData} = user._doc;
     
         res.json({
-            userData,
+            ...userData,
             token,
         });
     } catch (error) {
@@ -102,11 +104,25 @@ app.post("/auth/register", registerValidation, async (req, res) => {
     }
 });
 
-app.get("/auth/me", (req, res) => {
+app.get("/auth/me", checkAuth, async (req, res) => {
     try {
-        
+        const user = await UserModel.findById(req.userId);
+
+        if(!user) {
+            return res.status(404).json({
+                message: "Пользователь не найден"
+            })
+        }
+
+        const {passwordHash, ...userData} = user._doc;
+    
+        res.json(userData);
+
     } catch (error) {
-        
+        console.log(error);
+        res.status(500).json({
+            message: "Нет доступа",
+        })
     }
 })
 
